@@ -109,6 +109,12 @@ Get-ChildItem -Path $Source -File | ForEach-Object {
 	#    
 	#}
 
+	# Check whether old and new filename are equal
+	if ($Filename -eq $NewFilename) {
+		Write-Verbose "Filename of `"$Filename`" would not be changed. File will be ignored."
+		return
+	}
+
 	# Check whether files already exists
 	if (Test-Path -PathType Leaf -Path $DestinationFilename) {
 		Write-Warning "File `"$DestinationFilename`" already exists!"
