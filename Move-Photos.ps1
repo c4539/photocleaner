@@ -109,7 +109,7 @@ Get-ChildItem -Path $Source -File | ForEach-Object {
 	#    
 	#}
 
-	# Check whether old and new filename are equal
+	# Check whether old and new filename are equal (#5)
 	if ($Filename -eq $NewFilename) {
 		Write-Verbose "Filename of `"$Filename`" would not be changed. File will be ignored."
 		return
