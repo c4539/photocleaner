@@ -12,22 +12,45 @@ param(
 	$Destination
 ,
 	[String]
-	$TimeFormat="yyyy-MM-dd_HH-mm-ss"
+	$TimeFormat="yyyy-MM-dd HH-mm-ss"
+,
+	[String]
+	$Separator = " "
 ,
 	[Switch]
-	$UseSubfolders=$true
-	# [string]
-	# [ValidateSet("Restart","LogOff","Shutdown","PowerOff")]
+	$UseSubfolders=$false
+,
+	[string]
+	[ValidateSet("yyyy\\MM","yyyy-MM","yyyy")]
+	$SubfolderFormat = "yyyy\\MM"
+,
+	[Switch]
+	$Recurse=$false
 )
 
 
-
-Get-ChildItem -Path $Source -File | ForEach-Object {
+Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 	$File = $_
 	$Filename = $_.Name
 
 	# Parse Filename
 	switch -regex ($Filename) {
+		# Generic syntac
+		#2015-05-04_08-00-42
+		#yyyy-MM-dd_HH-mm-ss
+		"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*" {
+			$RegexMatches = [regex]::Match($Filename,"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*")
+			
+			$DTPrefix = $RegexMatches.Groups[0].Value
+			$FileTime = New-Object System.DateTime `
+									$RegexMatches.Groups[1].Value,`
+									$RegexMatches.Groups[2].Value,`
+									$RegexMatches.Groups[3].Value,`
+									$RegexMatches.Groups[4].Value,`
+									$RegexMatches.Groups[5].Value,`
+									$RegexMatches.Groups[6].Value
+		}
+
 		# Android syntax
 		#IMG_20150504_080042
 		#IMG_yyyyMMdd_HHmmss
@@ -75,6 +98,7 @@ Get-ChildItem -Path $Source -File | ForEach-Object {
 									$RegexMatches.Groups[6].Value
 		}
 		default {
+			Write-Verbose "Could not parse `"$Filename`"."
 			Write-Debug "Could not parse `"$Filename`"."
 			return
 		}
@@ -83,7 +107,7 @@ Get-ChildItem -Path $Source -File | ForEach-Object {
 	# Get suffix
 	$Suffix = $Filename.Substring($DTPrefix.Length);
 	if (-not $Suffix.StartsWith(".")) {
-		$Suffix = "_" + $Suffix
+		$Suffix = $Separator + $Suffix
 	}
 
 	# Build new filename
@@ -91,7 +115,7 @@ Get-ChildItem -Path $Source -File | ForEach-Object {
 
 	# Create subfolders if needed
 	if ($UseSubfolders) {
-		$DestinationFolder = [System.IO.Path]::Combine($Destination,$FileTime.ToString("yyyy\\MM")).ToString()
+		$DestinationFolder = [System.IO.Path]::Combine($Destination,$FileTime.ToString($SubfolderFormat)).ToString()
 		
 		if (-not (Test-Path -PathType Container -Path $DestinationFolder)) {
 			New-Item -Path $DestinationFolder -ItemType Directory -WhatIf:$WhatIfPreference | Out-Null
@@ -101,13 +125,8 @@ Get-ChildItem -Path $Source -File | ForEach-Object {
 	}
 
 	# Prepare pathes
-	$SourceFilename = $File.FullName.Replace('[','``[').Replace(']','``]')
-	$DestinationFilename = [System.IO.Path]::Combine($DestinationFolder,$NewFilename).ToString().Replace('[','``[').Replace(']','``]')
-
-	# Move File
-	#if ($pscmdlet.ShouldProcess("$File", "Move-File")){
-	#    
-	#}
+	$SourceFilename = $File.FullName.Replace('[','`[').Replace(']','`]')
+	$DestinationFilename = [System.IO.Path]::Combine($DestinationFolder,$NewFilename).ToString().Replace('[','`[').Replace(']','`]')
 
 	# Check whether old and new filename are equal (#5)
 	if ($Filename -eq $NewFilename) {
