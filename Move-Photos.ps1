@@ -35,7 +35,7 @@ Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 
 	# Parse Filename
 	switch -regex ($Filename) {
-		# Generic syntac
+		# Generic syntax
 		#2015-05-04_08-00-42
 		#yyyy-MM-dd_HH-mm-ss
 		"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*" {
