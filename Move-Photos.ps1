@@ -58,7 +58,7 @@ $Files | ForEach-Object {
 	$FileBaseName = $File.BaseName
 	
 	# Write progress
-	Write-Progress -Activity "Moving Photos" -Status "Moving $Filename" -PercentComplete ([int] (($ProgressBarCount++/$ProgressBarTotal)*100))
+	Write-Progress -Activity "Moving Photos" -Status "Processing $Filename" -PercentComplete ([int] (($ProgressBarCount++/$ProgressBarTotal)*100))
 	
 	# Set file name extension
 	switch ($ExtensionCase) {
