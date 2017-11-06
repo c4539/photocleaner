@@ -32,8 +32,9 @@ param(
 	$ExtensionCase = "Keep"
 )
 
+$Files = Get-ChildItem -Path $Source -File -Recurse:$Recurse
 
-Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
+ $Files | ForEach-Object {
 	$File = $_
 	$Filename = $File.Name
 	$FileBaseName = $File.BaseName
