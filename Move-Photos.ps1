@@ -32,20 +32,35 @@ param(
 	$ExtensionCase = "Keep"
 )
 
+# BEGIN Define regular expressions
+$TimeRegex = @()
+$TimeRegex += @{"Regex" = "^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*";
+				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
+$TimeRegex += @{"Regex" = "^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_\.]*";
+				"Year" = 2; "Month" = 3; "Day" = 4; "Hour" = 5; "Minute" = 6; "Second" = 7; }
+$TimeRegex += @{"Regex" = "^(Photo|Video)[\s-_\.](\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*";
+				"Year" = 2; "Month" = 3; "Day" = 4; "Hour" = 5; "Minute" = 6; "Second" = 7; }
+$TimeRegex += @{"Regex" = "^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_\.]*";
+				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
+# END Define regular expressions
+
+# Get files
 $Files = Get-ChildItem -Path $Source -File -Recurse:$Recurse
 
 # Init progress bar
 $ProgressBarCount = 0;
 $ProgressBarTotal = $Files.Length
 
- $Files | ForEach-Object {
+# Go through all files
+$Files | ForEach-Object {
 	$File = $_
 	$Filename = $File.Name
 	$FileBaseName = $File.BaseName
 	
 	# Write progress
-	Write-Progress -Activity "Moving Photos" -Status "Moving $Filename" -PercentComplete ([int] (($ProgressBarCount++/$ProgressBarTotal)*100))
+	Write-Progress -Activity "Moving Photos" -Status "Processing $Filename" -PercentComplete ([int] (($ProgressBarCount++/$ProgressBarTotal)*100))
 	
+	# Set file name extension
 	switch ($ExtensionCase) {
 		"UpperCase" {
 			$FileExtension = $File.Extension.ToUpper()
@@ -60,79 +75,34 @@ $ProgressBarTotal = $Files.Length
 		}
 	}
 
-	# Parse Filename
-	switch -regex ($FileBaseName) {
-		# Generic syntax
-		#2015-05-04_08-00-42
-		#yyyy-MM-dd_HH-mm-ss
-		"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*" {
-			$RegexMatches = [regex]::Match($FileBaseName,"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*")
+	# Parse existing filename
+	$Parsed = $false
+	foreach ($TR in $TimeRegex){
+		if (-not $Parsed -and $FileBaseName -match $TR.Regex) {
+			$RegexMatches = [regex]::Match($FileBaseName,$TR.Regex)
 			
 			$DTPrefix = $RegexMatches.Groups[0].Value
 			$FileTime = New-Object System.DateTime `
-									$RegexMatches.Groups[1].Value,`
-									$RegexMatches.Groups[2].Value,`
-									$RegexMatches.Groups[3].Value,`
-									$RegexMatches.Groups[4].Value,`
-									$RegexMatches.Groups[5].Value,`
-									$RegexMatches.Groups[6].Value
-		}
-
-		# Android syntax
-		#IMG_20150504_080042
-		#IMG_yyyyMMdd_HHmmss
-		"^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_]*" {
-			$RegexMatches = [regex]::Match($FileBaseName,"^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_]*")
+									$RegexMatches.Groups[$TR.Year].Value,`
+									$RegexMatches.Groups[$TR.Month].Value,`
+									$RegexMatches.Groups[$TR.Day].Value,`
+									$RegexMatches.Groups[$TR.Hour].Value,`
+									$RegexMatches.Groups[$TR.Minute].Value,`
+									$RegexMatches.Groups[$TR.Second].Value
 			
-			$DTPrefix = $RegexMatches.Groups[0].Value
-			$FileTime = New-Object System.DateTime `
-									$RegexMatches.Groups[2].Value,`
-									$RegexMatches.Groups[3].Value,`
-									$RegexMatches.Groups[4].Value,`
-									$RegexMatches.Groups[5].Value,`
-									$RegexMatches.Groups[6].Value,`
-									$RegexMatches.Groups[7].Value
+			$Parsed = $true
 		}
-
-		#Photo-2016-09-03-16-17-07_0033
-		#Photo-yyyy-MM-dd-HH-mm-ss_####
-		"^(Photo|Video)-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[\s-_]*" {
-			$RegexMatches = [regex]::Match($FileBaseName,"^(Photo|Video)-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[\s-_]*")
-			
-			$DTPrefix = $RegexMatches.Groups[0].Value
-			$FileTime = New-Object System.DateTime `
-									$RegexMatches.Groups[2].Value,`
-									$RegexMatches.Groups[3].Value,`
-									$RegexMatches.Groups[4].Value,`
-									$RegexMatches.Groups[5].Value,`
-									$RegexMatches.Groups[6].Value,`
-									$RegexMatches.Groups[7].Value
-		}
-
-		# Windows Phone / Mobile syntax
-		#WP_20161231_12_27_56
-		#WP_yyyyMMdd_HH_mm_ss
-		"^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_]*" {
-			$RegexMatches = [regex]::Match($FileBaseName,"^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_]*")
-			
-			$DTPrefix = $RegexMatches.Groups[0].Value
-			$FileTime = New-Object System.DateTime `
-									$RegexMatches.Groups[1].Value,`
-									$RegexMatches.Groups[2].Value,`
-									$RegexMatches.Groups[3].Value,`
-									$RegexMatches.Groups[4].Value,`
-									$RegexMatches.Groups[5].Value,`
-									$RegexMatches.Groups[6].Value
-		}
-		default {
-			Write-Verbose "Could not parse `"$Filename`"."
-			Write-Debug "Could not parse `"$Filename`"."
-			return
-		}
+	}
+	if (-not $Parsed) {
+		Write-Verbose "Could not parse `"$Filename`"."
+		Write-Debug "Could not parse `"$Filename`"."
+		return
 	}
 
 	# Get suffix
 	$Suffix = $FileBaseName.Substring($DTPrefix.Length);
+
+	# Separate suffix is exists
 	if ($Suffix.Length -gt 0) {
 		$Suffix = $Separator + $Suffix
 	}
@@ -155,7 +125,7 @@ $ProgressBarTotal = $Files.Length
 	$SourceFilename = $File.FullName.Replace('[','`[').Replace(']','`]')
 	$DestinationFilename = [System.IO.Path]::Combine($DestinationFolder,$NewFilename).ToString().Replace('[','`[').Replace(']','`]')
 
-	# Check whether old and new filename are equal (#5)
+	# Check whether old and new filename are equal
 	if ($SourceFilename -eq $DestinationFilename) {
 		Write-Verbose "Filename of `"$Filename`" would not be changed. File will be ignored."
 		return
