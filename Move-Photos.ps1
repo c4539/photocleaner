@@ -28,8 +28,9 @@ param(
 	$Recurse=$false
 )
 
+$Files = Get-ChildItem -Path $Source -File -Recurse:$Recurse
 
-Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
+ $Files | ForEach-Object {
 	$File = $_
 	$Filename = $_.Name
 	$FileBaseName = $_.BaseName
