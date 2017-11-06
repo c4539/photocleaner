@@ -34,12 +34,18 @@ param(
 
 $Files = Get-ChildItem -Path $Source -File -Recurse:$Recurse
 
+# Init progress bar
+$ProgressBarCount = 0;
+$ProgressBarTotal = $Files.Length
+
  $Files | ForEach-Object {
 	$File = $_
 	$Filename = $File.Name
 	$FileBaseName = $File.BaseName
 	
-
+	# Write progress
+	Write-Progress -Activity "Moving Photos" -Status "Moving $Filename" -PercentComplete ([int] (($ProgressBarCount++/$ProgressBarTotal)*100))
+	
 	switch ($ExtensionCase) {
 		"UpperCase" {
 			$FileExtension = $File.Extension.ToUpper()
