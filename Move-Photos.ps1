@@ -32,14 +32,16 @@ param(
 Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 	$File = $_
 	$Filename = $_.Name
+	$FileBaseName = $_.BaseName
+	$FileExtension = $_.Extension
 
 	# Parse Filename
-	switch -regex ($Filename) {
+	switch -regex ($FileBaseName) {
 		# Generic syntax
 		#2015-05-04_08-00-42
 		#yyyy-MM-dd_HH-mm-ss
 		"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*" {
-			$RegexMatches = [regex]::Match($Filename,"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*")
+			$RegexMatches = [regex]::Match($FileBaseName,"^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*")
 			
 			$DTPrefix = $RegexMatches.Groups[0].Value
 			$FileTime = New-Object System.DateTime `
@@ -55,7 +57,7 @@ Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 		#IMG_20150504_080042
 		#IMG_yyyyMMdd_HHmmss
 		"^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_]*" {
-			$RegexMatches = [regex]::Match($Filename,"^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_]*")
+			$RegexMatches = [regex]::Match($FileBaseName,"^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_]*")
 			
 			$DTPrefix = $RegexMatches.Groups[0].Value
 			$FileTime = New-Object System.DateTime `
@@ -70,7 +72,7 @@ Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 		#Photo-2016-09-03-16-17-07_0033
 		#Photo-yyyy-MM-dd-HH-mm-ss_####
 		"^(Photo|Video)-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[\s-_]*" {
-			$RegexMatches = [regex]::Match($Filename,"^(Photo|Video)-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[\s-_]*")
+			$RegexMatches = [regex]::Match($FileBaseName,"^(Photo|Video)-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[\s-_]*")
 			
 			$DTPrefix = $RegexMatches.Groups[0].Value
 			$FileTime = New-Object System.DateTime `
@@ -86,7 +88,7 @@ Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 		#WP_20161231_12_27_56
 		#WP_yyyyMMdd_HH_mm_ss
 		"^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_]*" {
-			$RegexMatches = [regex]::Match($Filename,"^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_]*")
+			$RegexMatches = [regex]::Match($FileBaseName,"^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_]*")
 			
 			$DTPrefix = $RegexMatches.Groups[0].Value
 			$FileTime = New-Object System.DateTime `
@@ -105,13 +107,13 @@ Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 	}
 
 	# Get suffix
-	$Suffix = $Filename.Substring($DTPrefix.Length);
-	if (-not $Suffix.StartsWith(".")) {
+	$Suffix = $FileBaseName.Substring($DTPrefix.Length);
+	if ($Suffix.Length -lt 0) {
 		$Suffix = $Separator + $Suffix
 	}
 
 	# Build new filename
-	$NewFilename = $FileTime.ToString($TimeFormat) + $Suffix
+	$NewFilename = $FileTime.ToString($TimeFormat) + $Suffix + $FileExtension
 
 	# Create subfolders if needed
 	if ($UseSubfolders) {
