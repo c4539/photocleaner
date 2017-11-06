@@ -33,7 +33,6 @@ param(
 )
 
 # BEGIN Define regular expressions
-# Format: Regex, year, month, day, hour, minute, second
 $TimeRegex = @()
 $TimeRegex += @{"Regex" = "^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*";
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
@@ -102,6 +101,8 @@ $Files | ForEach-Object {
 
 	# Get suffix
 	$Suffix = $FileBaseName.Substring($DTPrefix.Length);
+
+	# Separate suffix is exists
 	if ($Suffix.Length -gt 0) {
 		$Suffix = $Separator + $Suffix
 	}
