@@ -26,14 +26,32 @@ param(
 ,
 	[Switch]
 	$Recurse=$false
+,
+	[String]
+	[ValidateSet("UpperCase","LowerCase","Keep")]
+	$ExtensionCase = "Keep"
 )
 
 
 Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 	$File = $_
-	$Filename = $_.Name
-	$FileBaseName = $_.BaseName
-	$FileExtension = $_.Extension
+	$Filename = $File.Name
+	$FileBaseName = $File.BaseName
+	
+
+	switch ($ExtensionCase) {
+		"UpperCase" {
+			$FileExtension = $File.Extension.ToUpper()
+		}
+
+		"LowerCase" {
+			$FileExtension = $File.Extension.ToLower()
+		}
+
+		default {
+			$FileExtension = $File.Extension
+		}
+	}
 
 	# Parse Filename
 	switch -regex ($FileBaseName) {
