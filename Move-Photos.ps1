@@ -131,7 +131,7 @@ Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 	$DestinationFilename = [System.IO.Path]::Combine($DestinationFolder,$NewFilename).ToString().Replace('[','`[').Replace(']','`]')
 
 	# Check whether old and new filename are equal (#5)
-	if ($Filename -eq $NewFilename) {
+	if ($SourceFilename -eq $DestinationFilename) {
 		Write-Verbose "Filename of `"$Filename`" would not be changed. File will be ignored."
 		return
 	}
