@@ -108,7 +108,7 @@ Get-ChildItem -Path $Source -File -Recurse:$Recurse | ForEach-Object {
 
 	# Get suffix
 	$Suffix = $FileBaseName.Substring($DTPrefix.Length);
-	if ($Suffix.Length -lt 0) {
+	if ($Suffix.Length -gt 0) {
 		$Suffix = $Separator + $Suffix
 	}
 
