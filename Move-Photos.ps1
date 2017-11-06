@@ -32,13 +32,15 @@ param(
 	$ExtensionCase = "Keep"
 )
 
+# Get files
 $Files = Get-ChildItem -Path $Source -File -Recurse:$Recurse
 
 # Init progress bar
 $ProgressBarCount = 0;
 $ProgressBarTotal = $Files.Length
 
- $Files | ForEach-Object {
+# Go through all files
+$Files | ForEach-Object {
 	$File = $_
 	$Filename = $File.Name
 	$FileBaseName = $File.BaseName
@@ -46,6 +48,7 @@ $ProgressBarTotal = $Files.Length
 	# Write progress
 	Write-Progress -Activity "Moving Photos" -Status "Moving $Filename" -PercentComplete ([int] (($ProgressBarCount++/$ProgressBarTotal)*100))
 	
+	# Set file name extension
 	switch ($ExtensionCase) {
 		"UpperCase" {
 			$FileExtension = $File.Extension.ToUpper()
@@ -60,7 +63,7 @@ $ProgressBarTotal = $Files.Length
 		}
 	}
 
-	# Parse Filename
+	# Parse existing gilename
 	switch -regex ($FileBaseName) {
 		# Generic syntax
 		#2015-05-04_08-00-42
@@ -155,7 +158,7 @@ $ProgressBarTotal = $Files.Length
 	$SourceFilename = $File.FullName.Replace('[','`[').Replace(']','`]')
 	$DestinationFilename = [System.IO.Path]::Combine($DestinationFolder,$NewFilename).ToString().Replace('[','`[').Replace(']','`]')
 
-	# Check whether old and new filename are equal (#5)
+	# Check whether old and new filename are equal
 	if ($SourceFilename -eq $DestinationFilename) {
 		Write-Verbose "Filename of `"$Filename`" would not be changed. File will be ignored."
 		return
