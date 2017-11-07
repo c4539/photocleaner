@@ -8,10 +8,17 @@
 
 ## Usage
 -Source
+
 -Destination
+
 -TimeFormat="yyyy-MM-dd HH-mm-ss"
+
 -Separator = " "
+
 -UseSubfolders=$false
+
 -SubfolderFormat = "yyyy\\MM"
+
 -Recurse=$false
+
 -ExtensionCase = "Keep" ("UpperCase","LowerCase","Keep")
