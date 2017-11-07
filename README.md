@@ -1,4 +1,4 @@
-# photocleaner
+# Powershell Photo Cleaner
 
 ## Supported timestrings
 - `^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*`
@@ -7,6 +7,8 @@
 - `^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_\.]*`
 
 ## Usage
+`.\Move-Photos.ps1`
+
 -Source
 
 -Destination
