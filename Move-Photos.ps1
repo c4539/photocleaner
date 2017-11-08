@@ -136,10 +136,7 @@ $Files | ForEach-Object {
 		# Get file hashes
 		$DestinationFilehashSHA512 = (Get-FileHash -Path $DestinationFilename -Algorithm SHA512).Hash
 		$SourceFilehashSHA512 = (Get-FileHash -Path $SourceFilename -Algorithm SHA512).Hash
-
-		Write-Debug $DestinationFilehashSHA512
-		Write-Debug $SourceFilehashSHA512
-
+		
 		# Compare file hashes
 		if ($DestinationFilehashSHA512 -eq $SourceFilehashSHA512) {
 			# Files are identical according to their hashes. Source can be removed.
