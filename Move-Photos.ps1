@@ -133,7 +133,22 @@ $Files | ForEach-Object {
 
 	# Check whether files already exists
 	if (Test-Path -PathType Leaf -Path $DestinationFilename) {
-		Write-Warning "File `"$DestinationFilename`" already exists!"
+		# Get file hashes
+		$DestinationFilehashSHA512 = (Get-FileHash -Path $DestinationFilename -Algorithm SHA512).Hash
+		$SourceFilehashSHA512 = (Get-FileHash -Path $SourceFilename -Algorithm SHA512).Hash
+
+		Write-Debug $DestinationFilehashSHA512
+		Write-Debug $SourceFilehashSHA512
+
+		# Compare file hashes
+		if ($DestinationFilehashSHA512 -eq $SourceFilehashSHA512) {
+			# Files are identical according to their hashes. Source can be removed.
+			Write-Verbose "File `"$DestinationFilename`" already exists with same file hash. `"$SourceFilename`" will be removed."
+			Remove-Item -Path $SourceFilename -Confirm:$false -WhatIf:$WhatIfPreference
+		} else {
+			Write-Verbose "File `"$DestinationFilename`" already exists with different file hash!"
+			Write-Warning "File `"$DestinationFilename`" already exists with different file hash!"
+		}
 		return
 	}
 	
