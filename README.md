@@ -16,33 +16,33 @@ Destination directory to move the files to.
 ### TimeFormat
 The format of the new timestring.
 
-Default is "yyyy-MM-dd HH-mm-ss".
+Default is "`yyyy-MM-dd HH-mm-ss`".
 
 ### Separator
 The separator between the timestring and the old filename suffix.
 
-Default is " ".
+Default is "` `".
 
 ### UseSubfolders
 Switch whether to use subfolders in the destination or not.
 
-Default is "$false"
+Default is "`$false`"
 
 ### SubfolderFormat
 The format to create subfolders in the destination.
 
-Possible values are "yyyy\\MM", "yyyy-MM", or "yyyy".
+Possible values are "`yyyy\\MM`", "`yyyy-MM`", or "`yyyy`".
 
-Default is "yyyy\\MM".
+Default is "`yyyy\\MM`".
 
 ### Recurse
 Switch whether to scan the source recursive.
 
-Default is "$false".
+Default is "`$false`".
 
 ### ExtensionCase
 Switch how to treat the file extension.
 
-Possible values are "UpperCase", "LowerCase", and "Keep".
+Possible values are "`UpperCase`", "`LowerCase`", and "`Keep`".
 
-Default is "Keep".
+Default is "`Keep`".
