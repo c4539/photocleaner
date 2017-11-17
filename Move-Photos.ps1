@@ -1,3 +1,57 @@
+<#
+.SYNOPSIS
+Moves and renames photos and videos.
+
+.DESCRIPTION
+The Move-Photos script moves and renames photo and video files based on the timestamp within their filenames. 
+
+.PARAMETER Source 
+Source directory to read the files from.
+
+.PARAMETER Destination
+Destination directory to move the files to.
+
+.PARAMETER TimeFormat
+The format of the new timestring.
+Default is "yyyy-MM-dd HH-mm-ss".
+
+.PARAMETER Separator
+The separator between the timestring and the old filename suffix.
+Default is " ".
+
+.PARAMETER UseSubfolders
+Switch whether to use subfolders in the destination or not.
+Default is "$false"
+
+.PARAMETER SubfolderFormat
+The format to create subfolders in the destination.
+Possible values are "yyyy\\MM", "yyyy-MM", or "yyyy".
+Default is "yyyy\\MM".
+
+.PARAMETER Recurse
+Switch whether to scan the source recursive.
+Default is "$false".
+
+.PARAMETER ExtensionCase
+Switch how to treat the file extension.
+Possible values are "UpperCase", "LowerCase", and "Keep".
+Default is "Keep".
+
+.EXAMPLE
+Move photos from D:\in to D:\out
+.\Move-Photos.ps1 -Source D:\in -Destination D:\out
+
+.NOTES
+	File Name  : Move-Photos.ps1
+	Author     : c4539  
+	Requires   : PowerShell V4
+
+.LINK
+https://github.com/c4539/photocleaner
+#>
+
+#Requires -Version 4
+
 [CmdletBinding(SupportsShouldProcess=$true)]
 
 param(
@@ -20,7 +74,7 @@ param(
 	[Switch]
 	$UseSubfolders=$false
 ,
-	[string]
+	[String]
 	[ValidateSet("yyyy\\MM","yyyy-MM","yyyy")]
 	$SubfolderFormat = "yyyy\\MM"
 ,
