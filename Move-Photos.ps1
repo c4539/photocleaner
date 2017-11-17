@@ -1,13 +1,13 @@
-[CmdletBinding(SupportsShouldProcess=$true)]
+[CmdletBinding(SupportsShouldProcess=$true,PositionalBinding=$false)]
 
 param(
 	[ValidateScript({Test-Path -PathType Container -Path $_ })]
-	[Parameter(Mandatory=$true)]
+	[Parameter(Mandatory=$true,Position=1)]
 	[String]
 	$Source
 ,
 	[ValidateScript({Test-Path -PathType Container -Path $_ })]
-	[Parameter(Mandatory=$true)]
+	[Parameter(Mandatory=$true,Position=2)]
 	[String]
 	$Destination
 ,
