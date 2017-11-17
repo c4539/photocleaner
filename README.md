@@ -21,7 +21,7 @@ Default is "yyyy-MM-dd HH-mm-ss".
 ### Separator
 The separator between the timestring and the old filename suffix.
 
-Default it " ".
+Default is " ".
 
 ### UseSubfolders
 Switch whether to use subfolders in the destination or not.
