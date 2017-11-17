@@ -6,37 +6,43 @@
 - `^(Photo|Video)[\s-_\.](\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*`
 - `^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_\.]*`
 
-## Usage
-`.\Move-Photos.ps1`
-
-.PARAMETER Source 
+## Parameters
+### Source 
 Source directory to read the files from.
 
-.PARAMETER Destination
+### Destination
 Destination directory to move the files to.
 
-.PARAMETER TimeFormat
+### TimeFormat
 The format of the new timestring.
+
 Default is "yyyy-MM-dd HH-mm-ss".
 
-.PARAMETER Separator
+### Separator
 The separator between the timestring and the old filename suffix.
+
 Default it " ".
 
-.PARAMETER UseSubfolders
+### UseSubfolders
 Switch whether to use subfolders in the destination or not.
+
 Default is "$false"
 
-.PARAMETER SubfolderFormat
+### SubfolderFormat
 The format to create subfolders in the destination.
+
 Possible values are "yyyy\\MM", "yyyy-MM", or "yyyy".
+
 Default is "yyyy\\MM".
 
-.PARAMETER Recurse
+### Recurse
 Switch whether to scan the source recursive.
+
 Default is "$false".
 
-.PARAMETER ExtensionCase
+### ExtensionCase
 Switch how to treat the file extension.
+
 Possible values are "UpperCase", "LowerCase", and "Keep".
+
 Default is "Keep".
