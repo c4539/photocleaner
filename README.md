@@ -9,18 +9,34 @@
 ## Usage
 `.\Move-Photos.ps1`
 
--Source
+.PARAMETER Source 
+Source directory to read the files from.
 
--Destination
+.PARAMETER Destination
+Destination directory to move the files to.
 
--TimeFormat="yyyy-MM-dd HH-mm-ss"
+.PARAMETER TimeFormat
+The format of the new timestring.
+Default is "yyyy-MM-dd HH-mm-ss".
 
--Separator = " "
+.PARAMETER Separator
+The separator between the timestring and the old filename suffix.
+Default it " ".
 
--UseSubfolders=$false
+.PARAMETER UseSubfolders
+Switch whether to use subfolders in the destination or not.
+Default is "$false"
 
--SubfolderFormat = "yyyy\\MM"
+.PARAMETER SubfolderFormat
+The format to create subfolders in the destination.
+Possible values are "yyyy\\MM", "yyyy-MM", or "yyyy".
+Default is "yyyy\\MM".
 
--Recurse=$false
+.PARAMETER Recurse
+Switch whether to scan the source recursive.
+Default is "$false".
 
--ExtensionCase = "Keep" ("UpperCase","LowerCase","Keep")
+.PARAMETER ExtensionCase
+Switch how to treat the file extension.
+Possible values are "UpperCase", "LowerCase", and "Keep".
+Default is "Keep".
