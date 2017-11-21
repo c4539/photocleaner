@@ -159,7 +159,7 @@ $Files | ForEach-Object {
 	# Get suffix
 	$Suffix = $FileBaseName.Substring($DTPrefix.Length);
 
-	# Separate suffix is exists
+	# Separate suffix if exists
 	if ($Suffix.Length -gt 0) {
 		$Suffix = $Separator + $Suffix
 	}
