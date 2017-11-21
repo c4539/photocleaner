@@ -48,6 +48,7 @@ Move photos from D:\in to D:\out
 
 .LINK
 https://github.com/c4539/photocleaner
+
 #>
 
 #Requires -Version 4
@@ -158,7 +159,7 @@ $Files | ForEach-Object {
 	# Get suffix
 	$Suffix = $FileBaseName.Substring($DTPrefix.Length);
 
-	# Separate suffix is exists
+	# Separate suffix if exists
 	if ($Suffix.Length -gt 0) {
 		$Suffix = $Separator + $Suffix
 	}
