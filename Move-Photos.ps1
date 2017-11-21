@@ -48,6 +48,7 @@ Move photos from D:\in to D:\out
 
 .LINK
 https://github.com/c4539/photocleaner
+
 #>
 
 #Requires -Version 4
