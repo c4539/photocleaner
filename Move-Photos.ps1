@@ -169,13 +169,13 @@ $Files | ForEach-Object {
 
 	# Create subfolders if needed
 	if ($UseSubfolders) {
-		$DestinationFolder = [System.IO.Path]::Combine($Destination,$FileTime.ToString($SubfolderFormat)).ToString()
+		$DestinationFolder = [System.IO.Path]::Combine((Get-Item $Destination).FullName.ToString(),$FileTime.ToString($SubfolderFormat)).ToString()
 		
 		if (-not (Test-Path -PathType Container -Path $DestinationFolder)) {
 			New-Item -Path $DestinationFolder -ItemType Directory -WhatIf:$WhatIfPreference | Out-Null
 		}
 	} else {
-		$DestinationFolder = $Destination
+		$DestinationFolder = (Get-Item $Destination).FullName.ToString()
 	}
 
 	# Prepare pathes
