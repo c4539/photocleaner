@@ -101,6 +101,8 @@ $TimeRegex += @{"Regex" = "^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\d{3}_iOS
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
 $TimeRegex += @{"Regex" = "^FullSizeRender-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[-]?";
 				"Year" = 3; "Month" = 2; "Day" = 1; "Hour" = 4; "Minute" = 5; "Second" = $null; }
+$TimeRegex += @{"Regex" = "^IMG_(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})";
+				"Year" = 4; "Month" = 3; "Day" = 2; "Hour" = 5; "Minute" = 6; "Second" = $null; "Suffix" = 1; }
 # END Define regular expressions
 
 # Get files
@@ -150,6 +152,9 @@ $Files | ForEach-Object {
 									$(if ($TR.Second -eq $null) { "00" } else { $RegexMatches.Groups[$TR.Second].Value })
 			
 			$Parsed = $true
+
+			# Store SuffixID for later use
+			$SuffixID = $TR.Suffix;
 		}
 	}
 	if (-not $Parsed) {
@@ -159,11 +164,21 @@ $Files | ForEach-Object {
 	}
 
 	# Get suffix
-	$Suffix = $FileBaseName.Substring($DTPrefix.Length);
+	if ($SuffixID -eq $null) {
+		# Get suffix from the end of the filename
+		$Suffix = $FileBaseName.Substring($DTPrefix.Length);
 
-	# Separate suffix if exists
-	if ($Suffix.Length -gt 0) {
-		$Suffix = $Separator + $Suffix
+		# Separate suffix if exists
+		if ($Suffix.Length -gt 0) {
+			$Suffix = $Separator + $Suffix
+		}
+	} else {
+		# Get suffix from the RegEx
+		if ($RegexMatches.Groups[$SuffixID].Value.Length -gt 0) {
+			$Suffix = $Separator + $RegexMatches.Groups[$SuffixID].Value
+		} else {
+			$Suffix = ""
+		}
 	}
 
 	# Build new filename
