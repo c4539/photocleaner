@@ -99,6 +99,8 @@ $TimeRegex += @{"Regex" = "^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
 $TimeRegex += @{"Regex" = "^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\d{3}_iOS";
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
+$TimeRegex += @{"Regex" = "^FullSizeRender-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[-]?";
+				"Year" = 3; "Month" = 2; "Day" = 1; "Hour" = 4; "Minute" = 5; "Second" = $null; }
 # END Define regular expressions
 
 # Get files
@@ -140,12 +142,12 @@ $Files | ForEach-Object {
 			
 			$DTPrefix = $RegexMatches.Groups[0].Value
 			$FileTime = New-Object System.DateTime `
-									$RegexMatches.Groups[$TR.Year].Value,`
+									$(if ($RegexMatches.Groups[$TR.Year].Value.Length -eq 2) { 2000 + $RegexMatches.Groups[$TR.Year].Value } else { $RegexMatches.Groups[$TR.Year].Value }),`
 									$RegexMatches.Groups[$TR.Month].Value,`
 									$RegexMatches.Groups[$TR.Day].Value,`
 									$RegexMatches.Groups[$TR.Hour].Value,`
 									$RegexMatches.Groups[$TR.Minute].Value,`
-									$RegexMatches.Groups[$TR.Second].Value
+									$(if ($TR.Second -eq $null) { "00" } else { $RegexMatches.Groups[$TR.Second].Value })
 			
 			$Parsed = $true
 		}
