@@ -89,7 +89,7 @@ param(
 
 # BEGIN Define regular expressions
 $TimeRegex = @()
-$TimeRegex += @{"Regex" = "^(\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*";
+$TimeRegex += @{"Regex" = "^(\d{4})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]*";
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
 $TimeRegex += @{"Regex" = "^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_\.]*";
 				"Year" = 2; "Month" = 3; "Day" = 4; "Hour" = 5; "Minute" = 6; "Second" = 7; }
