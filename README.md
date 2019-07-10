@@ -1,5 +1,7 @@
 # Powershell Photo Cleaner
 
+Test
+
 A simple PowerShell script to rename photos by changing the format of the timestring in its filename.
 
 ## Supported timestrings
