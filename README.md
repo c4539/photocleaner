@@ -64,3 +64,9 @@ Default is "`$false`".
 Switch how to treat the file extension.  
 Possible values are "`UpperCase`", "`LowerCase`", and "`Keep`".  
 Default is "`Keep`".
+
+### UseFileAttributeFallback
+
+Switch whether to fall back to the file's `CreationTime`/`LastWriteTime` attributes (whichever is
+earlier) when no timestring can be extracted from the filename, instead of skipping the file.  
+Default is "`$false`".
