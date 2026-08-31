@@ -42,6 +42,11 @@ Switch how to treat the file extension.
 Possible values are "UpperCase", "LowerCase", and "Keep".
 Default is "Keep".
 
+.PARAMETER UseFileAttributeFallback
+Switch whether to fall back to the file's CreationTime/LastWriteTime attributes (whichever is
+earlier) when no timestring can be extracted from the filename, instead of skipping the file.
+Default is "$false".
+
 .EXAMPLE
 Move photos from D:\in to D:\out
 .\Move-Photos.ps1 -Source D:\in -Destination D:\out
@@ -90,6 +95,9 @@ param(
 	[String]
 	[ValidateSet("UpperCase","LowerCase","Keep")]
 	$ExtensionCase = "Keep"
+,
+	[Switch]
+	$UseFileAttributeFallback=$false
 )
 
 # BEGIN Define regular expressions
@@ -172,9 +180,19 @@ $Files | ForEach-Object {
 			}
 		}
 		if (-not $Parsed) {
-			Write-Verbose "Could not parse `"$Filename`"."
-			Write-Debug "Could not parse `"$Filename`"."
-			return
+			if ($UseFileAttributeFallback) {
+				# No timestring in the filename - fall back to the file's own timestamps.
+				# The earlier of CreationTime/LastWriteTime is used, since CreationTime alone
+				# can be reset to "when this file was copied here" on some platforms/filesystems,
+				# which would be later than when the photo was actually taken.
+				$FileTime = if ($File.CreationTime -lt $File.LastWriteTime) { $File.CreationTime } else { $File.LastWriteTime }
+				$DTPrefix = ""
+				$SuffixID = $null
+			} else {
+				Write-Verbose "Could not parse `"$Filename`"."
+				Write-Debug "Could not parse `"$Filename`"."
+				return
+			}
 		}
 
 		# Get suffix
