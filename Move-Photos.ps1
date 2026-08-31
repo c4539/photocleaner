@@ -3,9 +3,14 @@
 Moves and renames photos and videos.
 
 .DESCRIPTION
-The Move-Photos script moves and renames photo and video files based on the timestamp within their filenames. 
+The Move-Photos script moves and renames photo and video files based on the timestamp within their filenames.
 
-.PARAMETER Source 
+If a file with the same new name already exists at the destination and its content is byte-for-byte
+identical to the source file (compared via SHA512 hash), the source file is deleted instead of moved,
+since it is considered a duplicate. If the content differs, the source file is left untouched and a
+warning is written.
+
+.PARAMETER Source
 Source directory to read the files from.
 
 .PARAMETER Destination
@@ -88,7 +93,12 @@ param(
 )
 
 # BEGIN Define regular expressions
+# NOTE: Order matters. Patterns are tried top to bottom and the first match wins, so more
+# specific patterns (e.g. the iOS format) must come before more general ones that would
+# otherwise match a prefix of the same filename first (e.g. the generic numeric pattern).
 $TimeRegex = @()
+$TimeRegex += @{"Regex" = "^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\d{3}_iOS";
+				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
 $TimeRegex += @{"Regex" = "^(\d{4})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]?(\d{2})[\s-_\.]*";
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
 $TimeRegex += @{"Regex" = "^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})[\s-_\.]*";
@@ -96,8 +106,6 @@ $TimeRegex += @{"Regex" = "^(IMG|VID)_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2}
 $TimeRegex += @{"Regex" = "^(Photo|Video)[\s-_\.](\d{4})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.](\d{2})[\s-_\.]*";
 				"Year" = 2; "Month" = 3; "Day" = 4; "Hour" = 5; "Minute" = 6; "Second" = 7; }
 $TimeRegex += @{"Regex" = "^WP_(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})[\s-_\.]*";
-				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
-$TimeRegex += @{"Regex" = "^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\d{3}_iOS";
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
 $TimeRegex += @{"Regex" = "^FullSizeRender-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})[-]?";
 				"Year" = 3; "Month" = 2; "Day" = 1; "Hour" = 4; "Minute" = 5; "Second" = $null; }
@@ -108,7 +116,10 @@ $TimeRegex += @{"Regex" = "^(\d{2})-(\d{2})-(\d{2})[\s-_](\d{2})-(\d{2})-(\d{2})
 # END Define regular expressions
 
 # Get files
-$Files = Get-ChildItem -Path $Source -File -Recurse:$Recurse
+# Force an array even when there is exactly one (or zero) matching files, since PowerShell
+# unwraps a single-item result to a plain FileInfo object, whose .Length is its byte size
+# rather than a count of 1 - that broke the progress bar percentage below.
+$Files = @(Get-ChildItem -Path $Source -File -Recurse:$Recurse)
 
 # Init progress bar
 $ProgressBarCount = 0;
@@ -138,94 +149,102 @@ $Files | ForEach-Object {
 		}
 	}
 
-	# Parse existing filename
-	$Parsed = $false
-	foreach ($TR in $TimeRegex){
-		if (-not $Parsed -and $FileBaseName -match $TR.Regex) {
-			$RegexMatches = [regex]::Match($FileBaseName,$TR.Regex)
-			
-			$DTPrefix = $RegexMatches.Groups[0].Value
-			$FileTime = New-Object System.DateTime `
-									$(if ($RegexMatches.Groups[$TR.Year].Value.Length -eq 2) { 2000 + $RegexMatches.Groups[$TR.Year].Value } else { $RegexMatches.Groups[$TR.Year].Value }),`
-									$RegexMatches.Groups[$TR.Month].Value,`
-									$RegexMatches.Groups[$TR.Day].Value,`
-									$RegexMatches.Groups[$TR.Hour].Value,`
-									$RegexMatches.Groups[$TR.Minute].Value,`
-									$(if ($TR.Second -eq $null) { "00" } else { $RegexMatches.Groups[$TR.Second].Value })
-			
-			$Parsed = $true
+	try {
+		# Parse existing filename
+		$Parsed = $false
+		foreach ($TR in $TimeRegex){
+			if (-not $Parsed -and $FileBaseName -match $TR.Regex) {
+				$RegexMatches = [regex]::Match($FileBaseName,$TR.Regex)
 
-			# Store SuffixID for later use
-			$SuffixID = $TR.Suffix;
+				$DTPrefix = $RegexMatches.Groups[0].Value
+				$FileTime = New-Object System.DateTime `
+										$(if ($RegexMatches.Groups[$TR.Year].Value.Length -eq 2) { 2000 + $RegexMatches.Groups[$TR.Year].Value } else { $RegexMatches.Groups[$TR.Year].Value }),`
+										$RegexMatches.Groups[$TR.Month].Value,`
+										$RegexMatches.Groups[$TR.Day].Value,`
+										$RegexMatches.Groups[$TR.Hour].Value,`
+										$RegexMatches.Groups[$TR.Minute].Value,`
+										$(if ($TR.Second -eq $null) { "00" } else { $RegexMatches.Groups[$TR.Second].Value })
+
+				$Parsed = $true
+
+				# Store SuffixID for later use
+				$SuffixID = $TR.Suffix;
+			}
 		}
-	}
-	if (-not $Parsed) {
-		Write-Verbose "Could not parse `"$Filename`"."
-		Write-Debug "Could not parse `"$Filename`"."
-		return
-	}
-
-	# Get suffix
-	if ($SuffixID -eq $null) {
-		# Get suffix from the end of the filename
-		$Suffix = $FileBaseName.Substring($DTPrefix.Length);
-
-		# Separate suffix if exists
-		if ($Suffix.Length -gt 0) {
-			$Suffix = $Separator + $Suffix
+		if (-not $Parsed) {
+			Write-Verbose "Could not parse `"$Filename`"."
+			Write-Debug "Could not parse `"$Filename`"."
+			return
 		}
-	} else {
-		# Get suffix from the RegEx
-		if ($RegexMatches.Groups[$SuffixID].Value.Length -gt 0) {
-			$Suffix = $Separator + $RegexMatches.Groups[$SuffixID].Value
+
+		# Get suffix
+		if ($SuffixID -eq $null) {
+			# Get suffix from the end of the filename
+			$Suffix = $FileBaseName.Substring($DTPrefix.Length);
+
+			# Separate suffix if exists
+			if ($Suffix.Length -gt 0) {
+				$Suffix = $Separator + $Suffix
+			}
 		} else {
-			$Suffix = ""
+			# Get suffix from the RegEx
+			if ($RegexMatches.Groups[$SuffixID].Value.Length -gt 0) {
+				$Suffix = $Separator + $RegexMatches.Groups[$SuffixID].Value
+			} else {
+				$Suffix = ""
+			}
 		}
-	}
 
-	# Build new filename
-	$NewFilename = $FileTime.ToString($TimeFormat) + $Suffix + $FileExtension
+		# Build new filename
+		$NewFilename = $FileTime.ToString($TimeFormat) + $Suffix + $FileExtension
 
-	# Create subfolders if needed
-	if ($UseSubfolders) {
-		$DestinationFolder = [System.IO.Path]::Combine((Get-Item $Destination).FullName.ToString(),$FileTime.ToString($SubfolderFormat)).ToString()
-		
-		if (-not (Test-Path -PathType Container -Path $DestinationFolder)) {
-			New-Item -Path $DestinationFolder -ItemType Directory -WhatIf:$WhatIfPreference | Out-Null
-		}
-	} else {
-		$DestinationFolder = (Get-Item $Destination).FullName.ToString()
-	}
+		# Create subfolders if needed
+		if ($UseSubfolders) {
+			$DestinationFolder = [System.IO.Path]::Combine((Get-Item -LiteralPath $Destination).FullName.ToString(),$FileTime.ToString($SubfolderFormat)).ToString()
 
-	# Prepare pathes
-	$SourceFilename = $File.FullName.Replace('[','`[').Replace(']','`]')
-	$DestinationFilename = [System.IO.Path]::Combine($DestinationFolder,$NewFilename).ToString().Replace('[','`[').Replace(']','`]')
-
-	# Check whether old and new filename are equal
-	if ($SourceFilename -eq $DestinationFilename) {
-		Write-Verbose "Filename of `"$Filename`" would not be changed. File will be ignored."
-		return
-	}
-
-	# Check whether files already exists
-	if (Test-Path -PathType Leaf -Path $DestinationFilename) {
-		# Get file hashes
-		$DestinationFilehashSHA512 = (Get-FileHash -Path $DestinationFilename -Algorithm SHA512).Hash
-		$SourceFilehashSHA512 = (Get-FileHash -Path $SourceFilename -Algorithm SHA512).Hash
-		
-		# Compare file hashes
-		if ($DestinationFilehashSHA512 -eq $SourceFilehashSHA512) {
-			# Files are identical according to their hashes. Source can be removed.
-			Write-Verbose "File `"$DestinationFilename`" already exists with same file hash. `"$SourceFilename`" will be removed."
-			Remove-Item -Path $SourceFilename -Confirm:$false -WhatIf:$WhatIfPreference
+			if (-not (Test-Path -PathType Container -LiteralPath $DestinationFolder)) {
+				New-Item -LiteralPath $DestinationFolder -ItemType Directory -WhatIf:$WhatIfPreference | Out-Null
+			}
 		} else {
-			Write-Verbose "File `"$DestinationFilename`" already exists with different file hash!"
-			Write-Warning "File `"$DestinationFilename`" already exists with different file hash!"
+			$DestinationFolder = (Get-Item -LiteralPath $Destination).FullName.ToString()
 		}
+
+		# Prepare pathes
+		# Using -LiteralPath everywhere below avoids these being interpreted as wildcard
+		# expressions, so filenames containing characters like [ or ] are handled correctly
+		# without needing to be manually escaped.
+		$SourceFilename = $File.FullName
+		$DestinationFilename = [System.IO.Path]::Combine($DestinationFolder,$NewFilename).ToString()
+
+		# Check whether old and new filename are equal
+		if ($SourceFilename -eq $DestinationFilename) {
+			Write-Verbose "Filename of `"$Filename`" would not be changed. File will be ignored."
+			return
+		}
+
+		# Check whether files already exists
+		if (Test-Path -PathType Leaf -LiteralPath $DestinationFilename) {
+			# Get file hashes
+			$DestinationFilehashSHA512 = (Get-FileHash -LiteralPath $DestinationFilename -Algorithm SHA512).Hash
+			$SourceFilehashSHA512 = (Get-FileHash -LiteralPath $SourceFilename -Algorithm SHA512).Hash
+
+			# Compare file hashes
+			if ($DestinationFilehashSHA512 -eq $SourceFilehashSHA512) {
+				# Files are identical according to their hashes. Source can be removed.
+				Write-Verbose "File `"$DestinationFilename`" already exists with same file hash. `"$SourceFilename`" will be removed."
+				Remove-Item -LiteralPath $SourceFilename -Confirm:$false -WhatIf:$WhatIfPreference
+			} else {
+				Write-Verbose "File `"$DestinationFilename`" already exists with different file hash!"
+				Write-Warning "File `"$DestinationFilename`" already exists with different file hash!"
+			}
+			return
+		}
+
+		# Move file
+		Write-Verbose "Moving `"$SourceFilename`" to `"$DestinationFilename`"."
+		Move-Item -LiteralPath $SourceFilename -Destination $DestinationFilename -WhatIf:$WhatIfPreference
+	} catch {
+		Write-Warning "Failed to process `"$Filename`": $($_.Exception.Message)"
 		return
 	}
-	
-	# Move file
-	Write-Verbose "Moving `"$SourceFilename`" to `"$DestinationFilename`"."
-	Move-Item -Path $SourceFilename -Destination $DestinationFilename -WhatIf:$WhatIfPreference
 }
