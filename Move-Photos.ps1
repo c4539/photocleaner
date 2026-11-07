@@ -47,12 +47,12 @@ Switch whether to fall back to file metadata when no timestring can be extracted
 instead of skipping the file. The capture date stored in the file (EXIF DateTimeOriginal, or video
 creation date; requires exiftool on PATH, or Windows PowerShell for images) is preferred, then the
 earlier of CreationTime/LastWriteTime.
+Default is "$false".
 
 .PARAMETER ExifToolPath
 Path to the exiftool executable, used to read the capture date of photos and videos when
 -UseFileAttributeFallback is set. If omitted, exiftool is looked up on PATH. If it cannot be found,
 only images are checked (via System.Drawing, Windows PowerShell only).
-Default is "$false".
 
 .EXAMPLE
 Move photos from D:\in to D:\out
@@ -138,27 +138,43 @@ $TimeRegex += @{"Regex" = "^(\d{2})-(\d{2})-(\d{2})[\s-_](\d{2})-(\d{2})-(\d{2})
 # 1. exiftool (-ExifToolPath, else on PATH): handles EXIF (JPEG/HEIC/RAW...) and QuickTime/MP4 video tags.
 # 2. System.Drawing (Windows PowerShell only): EXIF DateTimeOriginal/DateTimeDigitized of images.
 # Returns $null if no capture date could be found.
-if ($ExifToolPath) {
-	if (-not (Test-Path -PathType Leaf -LiteralPath $ExifToolPath)) {
-		throw "ExifToolPath `"$ExifToolPath`" does not exist or is not a file."
+# Only resolve exiftool when the fallback is actually enabled.
+$ExifTool = $null
+if ($UseFileAttributeFallback) {
+	if ($ExifToolPath) {
+		if (-not (Test-Path -PathType Leaf -LiteralPath $ExifToolPath)) {
+			throw "ExifToolPath `"$ExifToolPath`" does not exist or is not a file."
+		}
+		$ExifTool = @{ "Source" = (Get-Item -LiteralPath $ExifToolPath).FullName }
+	} else {
+		$ExifTool = Get-Command exiftool -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
 	}
-	$ExifTool = @{ "Source" = (Get-Item -LiteralPath $ExifToolPath).FullName }
-} else {
-	$ExifTool = Get-Command exiftool -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
 }
 function Get-CaptureDate {
 	param([String]$LiteralPath)
 
 	$Styles = [System.Globalization.DateTimeStyles]::None
 	$Culture = [System.Globalization.CultureInfo]::InvariantCulture
-	$Parsed = [DateTime]::MinValue
+	$Date = [DateTime]::MinValue
 
 	if ($ExifTool) {
-		# -d gives a fixed, culture-independent output format; first non-empty tag wins.
-		$Out = & $ExifTool.Source -s3 -d "%Y-%m-%d %H:%M:%S" -DateTimeOriginal -CreateDate -MediaCreateDate -- $LiteralPath 2>$null
+		# -d gives a fixed, culture-independent output format. Tags are output in the order
+		# requested and missing ones are omitted, so the first line is the best available date:
+		# EXIF original -> QuickTime CreationDate (local time with offset, written by iPhones) ->
+		# CreateDate/MediaCreateDate. QuickTimeUTC=1 makes exiftool convert the latter two, which
+		# QuickTime/MP4 store as UTC, to local time so videos match photos taken at the same moment.
+		# UTF-8 filename charset keeps non-ASCII names intact on Windows.
+		$Out = & $ExifTool.Source -s3 -d "%Y-%m-%d %H:%M:%S" -api QuickTimeUTC=1 -charset filename=utf8 `
+				-DateTimeOriginal -QuickTime:CreationDate -CreateDate -MediaCreateDate -- $LiteralPath 2>&1
 		foreach ($Line in @($Out)) {
-			if ($Line -and [DateTime]::TryParseExact($Line.Trim(), "yyyy-MM-dd HH:mm:ss", $Culture, $Styles, [ref]$Parsed) -and $Parsed.Year -gt 1904) {
-				return $Parsed
+			if ($Line -is [System.Management.Automation.ErrorRecord]) {
+				if ($Line.ToString() -match "File not found") {
+					Write-Warning "exiftool could not open `"$LiteralPath`": $Line"
+				} else {
+					Write-Verbose "exiftool: $Line"
+				}
+			} elseif ($Line -and [DateTime]::TryParseExact("$Line".Trim(), "yyyy-MM-dd HH:mm:ss", $Culture, $Styles, [ref]$Date) -and $Date.Year -gt 1904) {
+				return $Date
 			}
 		}
 	}
@@ -173,8 +189,8 @@ function Get-CaptureDate {
 				foreach ($Id in 0x9003, 0x9004) {  # DateTimeOriginal, DateTimeDigitized
 					if ($Img.PropertyIdList -contains $Id) {
 						$Raw = [System.Text.Encoding]::ASCII.GetString($Img.GetPropertyItem($Id).Value).Trim([char]0, ' ')
-						if ([DateTime]::TryParseExact($Raw, "yyyy:MM:dd HH:mm:ss", $Culture, $Styles, [ref]$Parsed)) {
-							return $Parsed
+						if ([DateTime]::TryParseExact($Raw, "yyyy:MM:dd HH:mm:ss", $Culture, $Styles, [ref]$Date) -and $Date.Year -gt 1904) {
+							return $Date
 						}
 					}
 				}
