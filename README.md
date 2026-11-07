@@ -84,6 +84,8 @@ With `-UseFileAttributeFallback`, the script reads the real capture date from th
 [ExifTool](https://exiftool.org) is optional but recommended: it adds support for videos (MP4/MOV),
 HEIC and RAW files, and works with PowerShell 7. Without it, only images are checked, via
 System.Drawing on Windows PowerShell; everything else falls back to the file's `CreationTime`/`LastWriteTime`.
+Video creation dates, which QuickTime/MP4 store in UTC, are converted to local time.
+Implausible dates (year 1904 or earlier) are ignored.
 
 - **Windows:** `winget install OliverBetz.ExifTool`, `choco install exiftool`, `scoop install exiftool`, or
   download `exiftool.exe` from exiftool.org and either put it on `PATH` or pass `-ExifToolPath`.
