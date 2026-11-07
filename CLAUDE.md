@@ -18,14 +18,14 @@ Run it directly, e.g.:
 
 Use `-WhatIf` to preview changes without moving/deleting any files, and `-Verbose`/`-Debug` to see per-file parsing decisions (including files that fail to match any pattern).
 
-Key parameters (see the comment-based help at the top of `Move-Photos.ps1` or `README.md` for full details): `-Source`, `-Destination`, `-TimeFormat`, `-Separator`, `-UseSubfolders`, `-SubfolderFormat`, `-Recurse`, `-ExtensionCase`.
+Key parameters (see the comment-based help at the top of `Move-Photos.ps1` or `README.md` for full details): `-Source`, `-Destination`, `-TimeFormat`, `-Separator`, `-UseSubfolders`, `-SubfolderFormat`, `-Recurse`, `-ExtensionCase`, `-UseFileAttributeFallback`, `-ExifToolPath`.
 
 ## Architecture
 
 The entire logic lives in `Move-Photos.ps1` as a single sequential pipeline:
 
 1. **`$TimeRegex` table** (top of the script): an array of hashtables, each pairing a regex against known filename formats (stock Android/iOS camera names, `IMG_`/`VID_` prefixes, Windows Phone `WP_` names, `FullSizeRender-...`, etc.) with the capture-group indices for Year/Month/Day/Hour/Minute/Second (and optionally `Suffix`, when the remaining filename text isn't simply "everything after the matched prefix"). **This table is the source of truth for supported formats — `README.md`'s "Supported timestrings" list is a manually maintained copy and must be kept in sync whenever a regex is added, removed, or changed.** Order matters: entries are tried top to bottom and the first match wins, so a more specific pattern must be listed before a more general one it could otherwise be shadowed by (e.g. the iOS-specific pattern has to precede the generic numeric one).
-2. **Main loop** (`$Files | ForEach-Object`): for each file, tries every `$TimeRegex` entry in order until one matches, builds a `System.DateTime` from the captured groups (2-digit years are assumed to be 2000+), formats the new filename via `-TimeFormat`, and computes the destination path (optionally nested into `-SubfolderFormat` subfolders). If no pattern matches, the file is skipped unless `-UseFileAttributeFallback` is set, in which case the earlier of the file's `CreationTime`/`LastWriteTime` is used instead and the whole original filename is kept as the suffix.
+2. **Main loop** (`$Files | ForEach-Object`): for each file, tries every `$TimeRegex` entry in order until one matches, builds a `System.DateTime` from the captured groups (2-digit years are assumed to be 2000+), formats the new filename via `-TimeFormat`, and computes the destination path (optionally nested into `-SubfolderFormat` subfolders). If no pattern matches, the file is skipped unless `-UseFileAttributeFallback` is set, in which case the capture date from the file's metadata (`Get-CaptureDate`: EXIF/video tags via `exiftool` via `-ExifToolPath` or PATH, else System.Drawing EXIF on Windows) is used, then the earlier of `CreationTime`/`LastWriteTime`, and the whole original filename is kept as the suffix.
 3. **Collision handling**: if the destination file already exists, it compares SHA512 hashes — identical files cause the source to be deleted (dedup), differing files are left alone with a warning.
 4. **Move**: otherwise the file is moved via `Move-Item`, respecting `-WhatIf`.
 

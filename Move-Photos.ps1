@@ -43,8 +43,15 @@ Possible values are "UpperCase", "LowerCase", and "Keep".
 Default is "Keep".
 
 .PARAMETER UseFileAttributeFallback
-Switch whether to fall back to the file's CreationTime/LastWriteTime attributes (whichever is
-earlier) when no timestring can be extracted from the filename, instead of skipping the file.
+Switch whether to fall back to file metadata when no timestring can be extracted from the filename,
+instead of skipping the file. The capture date stored in the file (EXIF DateTimeOriginal, or video
+creation date; requires exiftool on PATH, or Windows PowerShell for images) is preferred, then the
+earlier of CreationTime/LastWriteTime.
+
+.PARAMETER ExifToolPath
+Path to the exiftool executable, used to read the capture date of photos and videos when
+-UseFileAttributeFallback is set. If omitted, exiftool is looked up on PATH. If it cannot be found,
+only images are checked (via System.Drawing, Windows PowerShell only).
 Default is "$false".
 
 .EXAMPLE
@@ -98,6 +105,9 @@ param(
 ,
 	[Switch]
 	$UseFileAttributeFallback=$false
+,
+	[String]
+	$ExifToolPath
 )
 
 # BEGIN Define regular expressions
@@ -122,6 +132,60 @@ $TimeRegex += @{"Regex" = "^IMG_(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})"
 $TimeRegex += @{"Regex" = "^(\d{2})-(\d{2})-(\d{2})[\s-_](\d{2})-(\d{2})-(\d{2})[\s-_\.]*";
 				"Year" = 1; "Month" = 2; "Day" = 3; "Hour" = 4; "Minute" = 5; "Second" = 6; }
 # END Define regular expressions
+
+# BEGIN Capture date helper
+# Tries to read the date the photo/video was actually taken from the file's metadata.
+# 1. exiftool (-ExifToolPath, else on PATH): handles EXIF (JPEG/HEIC/RAW...) and QuickTime/MP4 video tags.
+# 2. System.Drawing (Windows PowerShell only): EXIF DateTimeOriginal/DateTimeDigitized of images.
+# Returns $null if no capture date could be found.
+if ($ExifToolPath) {
+	if (-not (Test-Path -PathType Leaf -LiteralPath $ExifToolPath)) {
+		throw "ExifToolPath `"$ExifToolPath`" does not exist or is not a file."
+	}
+	$ExifTool = @{ "Source" = (Get-Item -LiteralPath $ExifToolPath).FullName }
+} else {
+	$ExifTool = Get-Command exiftool -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+}
+function Get-CaptureDate {
+	param([String]$LiteralPath)
+
+	$Styles = [System.Globalization.DateTimeStyles]::None
+	$Culture = [System.Globalization.CultureInfo]::InvariantCulture
+	$Parsed = [DateTime]::MinValue
+
+	if ($ExifTool) {
+		# -d gives a fixed, culture-independent output format; first non-empty tag wins.
+		$Out = & $ExifTool.Source -s3 -d "%Y-%m-%d %H:%M:%S" -DateTimeOriginal -CreateDate -MediaCreateDate -- $LiteralPath 2>$null
+		foreach ($Line in @($Out)) {
+			if ($Line -and [DateTime]::TryParseExact($Line.Trim(), "yyyy-MM-dd HH:mm:ss", $Culture, $Styles, [ref]$Parsed) -and $Parsed.Year -gt 1904) {
+				return $Parsed
+			}
+		}
+	}
+
+	try {
+		Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+		$Stream = [System.IO.File]::OpenRead($LiteralPath)
+		try {
+			# $false = don't validate image data, so this is fast
+			$Img = [System.Drawing.Image]::FromStream($Stream, $false, $false)
+			try {
+				foreach ($Id in 0x9003, 0x9004) {  # DateTimeOriginal, DateTimeDigitized
+					if ($Img.PropertyIdList -contains $Id) {
+						$Raw = [System.Text.Encoding]::ASCII.GetString($Img.GetPropertyItem($Id).Value).Trim([char]0, ' ')
+						if ([DateTime]::TryParseExact($Raw, "yyyy:MM:dd HH:mm:ss", $Culture, $Styles, [ref]$Parsed)) {
+							return $Parsed
+						}
+					}
+				}
+			} finally { $Img.Dispose() }
+		} finally { $Stream.Dispose() }
+	} catch {
+		# Not an image, or System.Drawing unavailable - no capture date.
+	}
+	return $null
+}
+# END Capture date helper
 
 # Get files
 # Force an array even when there is exactly one (or zero) matching files, since PowerShell
@@ -181,11 +245,17 @@ $Files | ForEach-Object {
 		}
 		if (-not $Parsed) {
 			if ($UseFileAttributeFallback) {
-				# No timestring in the filename - fall back to the file's own timestamps.
-				# The earlier of CreationTime/LastWriteTime is used, since CreationTime alone
-				# can be reset to "when this file was copied here" on some platforms/filesystems,
-				# which would be later than when the photo was actually taken.
-				$FileTime = if ($File.CreationTime -lt $File.LastWriteTime) { $File.CreationTime } else { $File.LastWriteTime }
+				# No timestring in the filename - fall back to the file's own metadata.
+				# First choice is the real capture date from EXIF/video metadata.
+				$FileTime = Get-CaptureDate -LiteralPath $File.FullName
+				if ($FileTime) {
+					Write-Verbose "Using capture date from metadata for `"$Filename`"."
+				} else {
+					# Otherwise use the earlier of CreationTime/LastWriteTime, since CreationTime alone
+					# can be reset to "when this file was copied here" on some platforms/filesystems,
+					# which would be later than when the photo was actually taken.
+					$FileTime = if ($File.CreationTime -lt $File.LastWriteTime) { $File.CreationTime } else { $File.LastWriteTime }
+				}
 				$DTPrefix = ""
 				$SuffixID = $null
 			} else {
