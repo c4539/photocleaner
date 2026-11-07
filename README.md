@@ -64,3 +64,28 @@ Default is "`$false`".
 Switch how to treat the file extension.  
 Possible values are "`UpperCase`", "`LowerCase`", and "`Keep`".  
 Default is "`Keep`".
+
+### UseFileAttributeFallback
+
+Switch whether to fall back to file metadata when no timestring can be extracted from the filename,
+instead of skipping the file. The capture date stored in the file (EXIF `DateTimeOriginal`, or the video
+creation date; needs [exiftool](https://exiftool.org) for videos, or Windows PowerShell for images; see [ExifTool](#exiftool-optional))
+is preferred, then the earlier of `CreationTime`/`LastWriteTime`.  
+Default is "`$false`".
+
+### ExifToolPath
+
+Path to the `exiftool` executable, e.g. a portable copy that isn't on `PATH`. If omitted, `exiftool`
+is looked up on `PATH`. Only used together with `-UseFileAttributeFallback`.
+
+## ExifTool (optional)
+
+With `-UseFileAttributeFallback`, the script reads the real capture date from the file's metadata.
+[ExifTool](https://exiftool.org) is optional but recommended: it adds support for videos (MP4/MOV),
+HEIC and RAW files, and works with PowerShell 7. Without it, only images are checked, via
+System.Drawing on Windows PowerShell; everything else falls back to the file's `CreationTime`/`LastWriteTime`.
+
+- **Windows:** `winget install OliverBetz.ExifTool`, `choco install exiftool`, `scoop install exiftool`, or
+  download `exiftool.exe` from exiftool.org and either put it on `PATH` or pass `-ExifToolPath`.
+- **macOS:** `brew install exiftool`
+- **Linux:** `apt install libimage-exiftool-perl` or `dnf install perl-Image-ExifTool`
